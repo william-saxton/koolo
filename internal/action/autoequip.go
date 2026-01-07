@@ -68,6 +68,10 @@ func isBarbLevelingCharacter() bool {
 func AutoEquip() error {
 	ctx := context.Get()
 
+	if !ctx.CharacterCfg.Game.Leveling.AutoEquip {
+		return nil
+	}
+
 	// skip autoequip for barb leveling during boss town routines
 	if ctx.IsBossEquipmentActive {
 		ctx.Logger.Debug("Boss equipment is active, skipping AutoEquip to preserve boss-specific equipment")

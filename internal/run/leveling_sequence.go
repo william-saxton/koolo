@@ -37,6 +37,7 @@ type DifficultyLevelingSettings struct {
 	NextDifficultyConditions *DifficultyConditionsSettings `json:"nextDifficultyConditions,omitempty"`
 	StayDifficultyConditions *DifficultyConditionsSettings `json:"stayDifficultyConditions,omitempty"`
 	ConfigSettings           []ConfigLevelingSettings      `json:"configSettings"`
+	CharacterSettings        *CharacterLevelingSettings    `json:"characterSettings,omitempty"`
 }
 
 type SequenceSettings struct {
@@ -61,8 +62,13 @@ type DifficultyConditionsSettings struct {
 }
 
 type ConfigLevelingSettings struct {
-	Level          *int                    `json:"level,omitempty"`
-	HealthSettings *HealthLevelingSettings `json:"healthSettings,omitempty"`
+	Level             *int                       `json:"level,omitempty"`
+	HealthSettings    *HealthLevelingSettings    `json:"healthSettings,omitempty"`
+	CharacterSettings *CharacterLevelingSettings `json:"characterSettings,omitempty"`
+}
+
+type CharacterLevelingSettings struct {
+	AutoEquip *bool `json:"autoEquip,omitempty"`
 }
 
 type HealthLevelingSettings struct {
@@ -326,7 +332,23 @@ func (ls LevelingSequence) AdjustHealthConfig() error {
 	playerLevel := lvl.Value
 
 	currentDifficulty := ls.ctx.CharacterCfg.Game.Difficulty
-	settingsApplied := ls.ApplyConfigSettings(ls.Settings.Normal.ConfigSettings, playerLevel)
+	settingsApplied := false
+
+	// Apply difficulty-level character settings
+	if ls.Settings.Normal.CharacterSettings != nil {
+		ls.ApplyCharacterSettings(*ls.Settings.Normal.CharacterSettings)
+		settingsApplied = true
+	}
+	if (currentDifficulty == difficulty.Nightmare || currentDifficulty == difficulty.Hell) && ls.Settings.Nightmare.CharacterSettings != nil {
+		ls.ApplyCharacterSettings(*ls.Settings.Nightmare.CharacterSettings)
+		settingsApplied = true
+	}
+	if currentDifficulty == difficulty.Hell && ls.Settings.Hell.CharacterSettings != nil {
+		ls.ApplyCharacterSettings(*ls.Settings.Hell.CharacterSettings)
+		settingsApplied = true
+	}
+
+	settingsApplied = ls.ApplyConfigSettings(ls.Settings.Normal.ConfigSettings, playerLevel) || settingsApplied
 
 	if currentDifficulty == difficulty.Nightmare || currentDifficulty == difficulty.Hell {
 		settingsApplied = ls.ApplyConfigSettings(ls.Settings.Nightmare.ConfigSettings, playerLevel) || settingsApplied
@@ -366,10 +388,20 @@ func (ls LevelingSequence) ApplyConfigSettings(configSettings []ConfigLevelingSe
 				ls.ApplyHealthSetting(*configSetting.HealthSettings)
 				settingsApplied = true
 			}
+			if configSetting.CharacterSettings != nil {
+				ls.ApplyCharacterSettings(*configSetting.CharacterSettings)
+				settingsApplied = true
+			}
 		}
 	}
 
 	return settingsApplied
+}
+
+func (ls LevelingSequence) ApplyCharacterSettings(characterSetting CharacterLevelingSettings) {
+	if characterSetting.AutoEquip != nil {
+		ls.ctx.CharacterCfg.Game.Leveling.AutoEquip = *characterSetting.AutoEquip
+	}
 }
 
 func (ls LevelingSequence) ApplyHealthSetting(healthSetting HealthLevelingSettings) error {
@@ -683,7 +715,6 @@ func (ls LevelingSequence) setupLevelOneConfig() {
 	ls.ctx.CharacterCfg.Game.Difficulty = difficulty.Normal
 	ls.ctx.CharacterCfg.Game.Leveling.EnsurePointsAllocation = true
 	ls.ctx.CharacterCfg.Game.Leveling.EnsureKeyBinding = true
-	ls.ctx.CharacterCfg.Game.Leveling.AutoEquip = true
 	ls.ctx.CharacterCfg.Game.RunewordMaker.Enabled = true
 	ls.ctx.CharacterCfg.Game.RunewordMaker.EnabledRecipes = ls.GetRunewords()
 	ls.ctx.CharacterCfg.Character.UseTeleport = false

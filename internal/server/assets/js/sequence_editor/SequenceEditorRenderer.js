@@ -4,6 +4,7 @@ import { DomTargetResolver } from "./dom/DomTargetResolver.js";
 import { DIFFICULTIES, RENDER_PIPELINE } from "./constants.js";
 import { ConditionSectionRenderer } from "./renderers/ConditionSectionRenderer.js";
 import { ConfigSectionRenderer } from "./renderers/ConfigSectionRenderer.js";
+import { DifficultySettingsRenderer } from "./renderers/DifficultySettingsRenderer.js";
 import { DragReorderManager } from "./renderers/DragReorderManager.js";
 import { QuestSectionRenderer } from "./renderers/QuestSectionRenderer.js";
 import { RunSectionRenderer } from "./renderers/RunSectionRenderer.js";
@@ -88,6 +89,13 @@ export class SequenceEditorRenderer {
       domTargets: this.domTargets,
     });
 
+    this.difficultySettingsRenderer = new DifficultySettingsRenderer({
+      state: this.state,
+      dataAdapter: this.dataAdapter,
+      markDirty: this.markDirty,
+      domTargets: this.domTargets,
+    });
+
     this.registerSectionRenderers();
   }
 
@@ -155,6 +163,9 @@ export class SequenceEditorRenderer {
       },
       config: ({ difficulty }) => {
         this.configRenderer.render(difficulty);
+      },
+      difficultySettings: ({ difficulty }) => {
+        this.difficultySettingsRenderer.render(difficulty);
       },
     };
 
@@ -332,6 +343,7 @@ export class SequenceEditorRenderer {
     const entry = {
       level: null,
       healthSettings: {},
+      characterSettings: { autoEquip: undefined },
     };
     this.state.ensureEntryUID(entry);
     list.push(entry);

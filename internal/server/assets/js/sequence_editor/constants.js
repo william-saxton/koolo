@@ -14,9 +14,10 @@ export const DIFFICULTIES = ["normal", "nightmare", "hell"];
 
 /**
  * Sequence in which editor sections render for each tab.
- * @type {Array<{type:"run"|"quest"|"condition"|"config", section?:RunSectionKey}>}
+ * @type {Array<{type:"run"|"quest"|"condition"|"config"|"difficultySettings", section?:RunSectionKey}>}
  */
 export const RENDER_PIPELINE = [
+  { type: "difficultySettings" },
   { type: "run", section: "beforeQuests" },
   { type: "quest" },
   { type: "run", section: "afterQuests" },

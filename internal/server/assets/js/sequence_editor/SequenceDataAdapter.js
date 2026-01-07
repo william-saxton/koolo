@@ -47,7 +47,8 @@ const BELT_COLUMN_OPTIONS = [
  * @typedef {{
  * level?: NumericLike,
  * Level?: NumericLike,
- * healthSettings?: RawHealthSettings
+ * healthSettings?: RawHealthSettings,
+ * characterSettings?: { autoEquip?: boolean, AutoEquip?: boolean }
  * }} RawConfigEntry
  */
 
@@ -84,7 +85,8 @@ const BELT_COLUMN_OPTIONS = [
 /**
  * @typedef {RawConfigEntry & {
  * level?: number,
- * healthSettings: SequenceHealthSettings
+ * healthSettings: SequenceHealthSettings,
+ * characterSettings: { autoEquip: boolean|undefined }
  * }} SequenceConfigEntry
  */
 
@@ -106,6 +108,7 @@ const BELT_COLUMN_OPTIONS = [
  * quests: SequenceRunEntry[],
  * afterQuests: SequenceRunEntry[],
  * configSettings: SequenceConfigEntry[],
+ * characterSettings: { autoEquip: boolean|undefined },
  * nextDifficultyConditions?: SequenceConditionEntry,
  * stayDifficultyConditions?: SequenceConditionEntry
  * }} DifficultySettings
@@ -117,6 +120,7 @@ const BELT_COLUMN_OPTIONS = [
  * quests: RawRunEntry[],
  * afterQuests: RawRunEntry[],
  * configSettings: RawConfigEntry[],
+ * characterSettings?: { autoEquip?: boolean, AutoEquip?: boolean },
  * nextDifficultyConditions?: RawConditionEntry,
  * stayDifficultyConditions?: RawConditionEntry
  * }} SerializedDifficultySettings
@@ -188,6 +192,14 @@ export class SequenceDataAdapter {
     settings.nextDifficultyConditions = this.hydrateConditionEntry(source.nextDifficultyConditions);
     settings.stayDifficultyConditions = this.hydrateConditionEntry(source.stayDifficultyConditions);
 
+    const charSource = /** @type {any} */ (
+      source.characterSettings && typeof source.characterSettings === "object"
+        ? source.characterSettings
+        : {});
+    if (charSource.autoEquip != null || charSource.AutoEquip != null) {
+      settings.characterSettings.autoEquip = Boolean(charSource.autoEquip ?? charSource.AutoEquip);
+    }
+
     return settings;
   }
 
@@ -250,7 +262,16 @@ export class SequenceDataAdapter {
     const entry = /** @type {SequenceConfigEntry} */ ({
       level: parseOptionalNumber(raw.level ?? raw.Level),
       healthSettings: {},
+      characterSettings: { autoEquip: undefined },
     });
+
+    const charSource = /** @type {any} */ (
+      raw.characterSettings && typeof raw.characterSettings === "object"
+        ? raw.characterSettings
+        : {});
+    if (charSource.autoEquip != null || charSource.AutoEquip != null) {
+      entry.characterSettings.autoEquip = Boolean(charSource.autoEquip ?? charSource.AutoEquip);
+    }
 
     const healthSource =
       raw.healthSettings && typeof raw.healthSettings === "object"
@@ -324,6 +345,12 @@ export class SequenceDataAdapter {
       afterQuests: this.serializeRunSection(settings?.afterQuests),
       configSettings: this.serializeConfigSection(settings?.configSettings),
     });
+
+    if (settings?.characterSettings && settings.characterSettings.autoEquip != null) {
+      result.characterSettings = {
+        autoEquip: settings.characterSettings.autoEquip,
+      };
+    }
 
     if (settings?.nextDifficultyConditions) {
       const serializedNext = this.serializeConditionEntry(settings.nextDifficultyConditions);
@@ -418,12 +445,18 @@ export class SequenceDataAdapter {
 
       const beltColumns = this.normalizeBeltColumns(entry.healthSettings.beltColumns);
       if (beltColumns.some(Boolean)) {
-        health.beltColumns = beltColumns.map((value) => (value ? value : null));
+        health.beltColumns = beltColumns.map((value) => (value ? value : undefined));
       }
     }
 
     if (Object.keys(health).length) {
       result.healthSettings = health;
+    }
+
+    if (entry.characterSettings && entry.characterSettings.autoEquip != null) {
+      result.characterSettings = {
+        autoEquip: entry.characterSettings.autoEquip,
+      };
     }
 
     if (!Object.keys(result).length) {
@@ -490,14 +523,15 @@ export class SequenceDataAdapter {
 
   /** Normalizes editor state by ensuring predictable arrays and camelCase fields. */
   normalizeClientData() {
-    if (!this.state.data) {
+    const data = this.state.data;
+    if (!data) {
       return;
     }
 
     DIFFICULTIES.forEach((difficulty) => {
-      const settings = this.state.data[difficulty];
+      const settings = data[difficulty];
       if (!settings) {
-        this.state.data[difficulty] = this.createEmptyDifficultySettings();
+        data[difficulty] = this.createEmptyDifficultySettings();
         return;
       }
 
@@ -560,7 +594,7 @@ export class SequenceDataAdapter {
       entry.healthSettings = {};
     }
 
-    const numericFields = new Set(/** @type {string[]} */ (this.healthFieldDefinitions().map(([field]) => field)));
+    const numericFields = new Set(/** @type {string[]} */(this.healthFieldDefinitions().map(([field]) => field)));
     Object.keys(entry.healthSettings).forEach((key) => {
       if (!numericFields.has(key)) {
         return;
@@ -639,6 +673,7 @@ export class SequenceDataAdapter {
       nextDifficultyConditions: undefined,
       stayDifficultyConditions: undefined,
       configSettings: [],
+      characterSettings: { autoEquip: undefined },
     };
   }
 

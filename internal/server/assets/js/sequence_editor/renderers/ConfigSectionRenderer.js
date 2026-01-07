@@ -149,10 +149,16 @@ export class ConfigSectionRenderer {
       config.healthSettings = {};
     }
 
+    if (!config.characterSettings) {
+      config.characterSettings = { autoEquip: undefined };
+    }
+
     const percentGrid = document.createElement("div");
     percentGrid.className = "config-editor-grid";
     const inventoryGrid = document.createElement("div");
     inventoryGrid.className = "config-editor-grid";
+    const characterGrid = document.createElement("div");
+    characterGrid.className = "config-editor-grid";
 
     const percentFields = [];
     const inventoryFields = [];
@@ -207,6 +213,39 @@ export class ConfigSectionRenderer {
     if (inventoryFields.length) {
       editor.appendChild(inventoryGrid);
     }
+
+    const autoEquipSelect = document.createElement("select");
+    [
+      { value: "", label: "Use character setting" },
+      { value: "true", label: "Enabled" },
+      { value: "false", label: "Disabled" },
+    ].forEach((opt) => {
+      const option = document.createElement("option");
+      option.value = opt.value;
+      option.textContent = opt.label;
+      autoEquipSelect.appendChild(option);
+    });
+
+    autoEquipSelect.value =
+      config.characterSettings.autoEquip === true
+        ? "true"
+        : config.characterSettings.autoEquip === false
+          ? "false"
+          : "";
+
+    autoEquipSelect.addEventListener("change", (event) => {
+      const target = /** @type {HTMLSelectElement} */ (event.target);
+      if (target.value === "") {
+        config.characterSettings.autoEquip = undefined;
+      } else {
+        config.characterSettings.autoEquip = target.value === "true";
+      }
+      refreshSummary();
+      this.markDirty();
+    });
+
+    characterGrid.appendChild(buildField("Auto Equip", autoEquipSelect, "config-editor-field"));
+    editor.appendChild(characterGrid);
 
     let beltColumns = this.dataAdapter.normalizeBeltColumns(config.healthSettings.beltColumns);
     const beltGrid = document.createElement("div");
@@ -399,6 +438,9 @@ export class ConfigSectionRenderer {
       if (settings[field] === true) auraOn.push(summaryLabel);
     });
     if (auraOn.length) parts.push(`Chicken on Aura: ${auraOn.join(", ")}`);
+    if (config.characterSettings && config.characterSettings.autoEquip != null) {
+      parts.push(`Auto Equip: ${config.characterSettings.autoEquip ? "ON" : "OFF"}`);
+    }
 
     return parts.length ? parts.join(" • ") : "No adjustments";
   }

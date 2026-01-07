@@ -8,6 +8,7 @@ const SELECTORS = {
   quest: ({ difficulty }) => `.quest-list[data-difficulty="${difficulty}"]`,
   condition: ({ difficulty }) => `.condition-list[data-difficulty="${difficulty}"]`,
   config: ({ difficulty }) => `.config-settings[data-difficulty="${difficulty}"]`,
+  difficultySettings: ({ difficulty }) => `.difficulty-settings[data-difficulty="${difficulty}"]`,
   tabPanel: ({ difficulty }) => `.tab-panel[data-difficulty="${difficulty}"]`,
 };
 
@@ -72,6 +73,14 @@ export class DomTargetResolver {
    */
   getConfigContainer(difficulty) {
     return this.getOrQuery(buildKey("config", difficulty), SELECTORS.config({ difficulty }));
+  }
+
+  /**
+   * @param {DifficultyKey} difficulty
+   * @returns {HTMLElement|null}
+   */
+  getDifficultySettingsContainer(difficulty) {
+    return this.getOrQuery(buildKey("difficultySettings", difficulty), SELECTORS.difficultySettings({ difficulty }));
   }
 
   /**
